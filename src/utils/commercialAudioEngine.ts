@@ -30,7 +30,6 @@ export const playTransitionWhoosh = (
   const now = Math.max(0, startTime);
   const duration = 0.28;
 
-  // Windowed smooth noise generator to prevent any start/end edge pops or clicks
   const bufferSize = Math.floor(ctx.sampleRate * duration);
   const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
   const output = noiseBuffer.getChannelData(0);
@@ -42,12 +41,10 @@ export const playTransitionWhoosh = (
   const whiteNoise = ctx.createBufferSource();
   whiteNoise.buffer = noiseBuffer;
 
-  // Highpass filter completely eliminates low-frequency thumps/crunches
   const highpass = ctx.createBiquadFilter();
   highpass.type = 'highpass';
   highpass.frequency.setValueAtTime(850, now);
 
-  // Bandpass filter produces the crisp, silky air whoosh sweep
   const bandpass = ctx.createBiquadFilter();
   bandpass.type = 'bandpass';
   bandpass.Q.setValueAtTime(1.6, now);
@@ -102,9 +99,6 @@ export const playShimmerChime = (
   });
 };
 
-/**
- * Synthesizes a kick drum hit
- */
 const playKick = (ctx: AudioContext | OfflineAudioContext, dest: AudioNode, time: number, vol = 0.6) => {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -120,11 +114,7 @@ const playKick = (ctx: AudioContext | OfflineAudioContext, dest: AudioNode, time
   osc.stop(time + 0.22);
 };
 
-/**
- * Synthesizes a snare/clap hit
- */
 const playSnare = (ctx: AudioContext | OfflineAudioContext, dest: AudioNode, time: number, vol = 0.5) => {
-  // Noise component
   const bufferSize = Math.floor(ctx.sampleRate * 0.15);
   const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
   const output = noiseBuffer.getChannelData(0);
@@ -149,9 +139,6 @@ const playSnare = (ctx: AudioContext | OfflineAudioContext, dest: AudioNode, tim
   noise.stop(time + 0.15);
 };
 
-/**
- * Synthesizes a closed hi-hat
- */
 const playHiHat = (ctx: AudioContext | OfflineAudioContext, dest: AudioNode, time: number, vol = 0.3) => {
   const bufferSize = Math.floor(ctx.sampleRate * 0.05);
   const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -177,9 +164,6 @@ const playHiHat = (ctx: AudioContext | OfflineAudioContext, dest: AudioNode, tim
   noise.stop(time + 0.05);
 };
 
-/**
- * Synthesizes a synth chord / pluck
- */
 const playChord = (
   ctx: AudioContext | OfflineAudioContext,
   dest: AudioNode,
@@ -206,9 +190,6 @@ const playChord = (
   });
 };
 
-/**
- * Synthesizes a rich Bass note
- */
 const playBassNote = (
   ctx: AudioContext | OfflineAudioContext,
   dest: AudioNode,
@@ -240,9 +221,6 @@ const playBassNote = (
   osc.stop(time + duration + 0.05);
 };
 
-/**
- * Schedules complete synthesized background music or custom loop for a given duration
- */
 export const scheduleBackgroundMusic = (
   ctx: AudioContext | OfflineAudioContext,
   masterDest: AudioNode,
@@ -257,7 +235,6 @@ export const scheduleBackgroundMusic = (
   musicGain.gain.setValueAtTime(volume, 0);
   musicGain.connect(masterDest);
 
-  // 1. Custom Uploaded Audio Buffer
   if (genre === 'custom' && customBuffer) {
     const source = ctx.createBufferSource();
     source.buffer = customBuffer;
@@ -268,20 +245,18 @@ export const scheduleBackgroundMusic = (
     return;
   }
 
-  // 2. Upbeat E-Commerce Commercial Pop (120 BPM - 4/4)
   if (genre === 'upbeat_pop') {
     const bpm = 122;
-    const beatInterval = 60 / bpm; // ~0.4918s per beat
+    const beatInterval = 60 / bpm;
     const totalBeats = Math.ceil(totalDurationSec / beatInterval);
 
-    // Chords: Cmaj7 (C4,E4,G4,B4), Am7 (A3,C4,E4,G4), Fmaj7 (F3,A3,C4,E4), G7 (G3,B3,D4,F4)
     const chords = [
-      [261.63, 329.63, 392.0, 493.88], // Cmaj7
-      [220.0, 261.63, 329.63, 392.0], // Am7
-      [174.61, 220.0, 261.63, 329.63], // Fmaj7
-      [196.0, 246.94, 293.66, 349.23], // G7
+      [261.63, 329.63, 392.0, 493.88],
+      [220.0, 261.63, 329.63, 392.0],
+      [174.61, 220.0, 261.63, 329.63],
+      [196.0, 246.94, 293.66, 349.23],
     ];
-    const bassNotes = [65.41, 55.0, 43.65, 49.0]; // C2, A1, F1, G1
+    const bassNotes = [65.41, 55.0, 43.65, 49.0];
 
     for (let beat = 0; beat < totalBeats; beat++) {
       const time = beat * beatInterval;
@@ -290,7 +265,6 @@ export const scheduleBackgroundMusic = (
       const measureIdx = Math.floor(beat / 4) % 4;
       const beatInMeasure = beat % 4;
 
-      // Kick on 0, 2 (and upbeat 2.5)
       if (beatInMeasure === 0 || beatInMeasure === 2) {
         playKick(ctx, musicGain, time, 0.6);
       }
@@ -298,23 +272,19 @@ export const scheduleBackgroundMusic = (
         playKick(ctx, musicGain, time + beatInterval * 0.5, 0.4);
       }
 
-      // Snare / Clap on 1, 3
       if (beatInMeasure === 1 || beatInMeasure === 3) {
         playSnare(ctx, musicGain, time, 0.5);
       }
 
-      // Hi-Hats every eighth note
       playHiHat(ctx, musicGain, time, 0.25);
       if (time + beatInterval * 0.5 < totalDurationSec) {
         playHiHat(ctx, musicGain, time + beatInterval * 0.5, 0.2);
       }
 
-      // Synth Chords on beat 0 and beat 2.5
       if (beatInMeasure === 0 || beatInMeasure === 2) {
         playChord(ctx, musicGain, time, chords[measureIdx], beatInterval * 1.6, 0.35, 'triangle');
       }
 
-      // Funky Bassline
       if (beatInMeasure === 0) {
         playBassNote(ctx, musicGain, time, bassNotes[measureIdx], beatInterval * 0.8, 0.5);
       } else if (beatInMeasure === 2) {
@@ -324,18 +294,16 @@ export const scheduleBackgroundMusic = (
     return;
   }
 
-  // 3. Luxury Fashion Modern Chill Beat (96 BPM)
   if (genre === 'luxury_chill') {
     const bpm = 96;
-    const beatInterval = 60 / bpm; // ~0.625s per beat
+    const beatInterval = 60 / bpm;
     const totalBeats = Math.ceil(totalDurationSec / beatInterval);
 
-    // Warm Neo-Soul Chords: Dm9, G13, Cmaj9, A7alt
     const chords = [
-      [293.66, 349.23, 440.0, 523.25, 659.25], // Dm9
-      [196.0, 246.94, 329.63, 349.23, 440.0], // G13
-      [261.63, 329.63, 392.0, 493.88, 587.33], // Cmaj9
-      [220.0, 277.18, 329.63, 392.0, 523.25], // A7(b13)
+      [293.66, 349.23, 440.0, 523.25, 659.25],
+      [196.0, 246.94, 329.63, 349.23, 440.0],
+      [261.63, 329.63, 392.0, 493.88, 587.33],
+      [220.0, 277.18, 329.63, 392.0, 523.25],
     ];
     const bassNotes = [73.42, 49.0, 65.41, 55.0];
 
@@ -354,7 +322,6 @@ export const scheduleBackgroundMusic = (
         playSnare(ctx, musicGain, time, 0.35);
       }
 
-      // Shaker 16th notes
       for (let s = 0; s < 4; s++) {
         const sTime = time + s * (beatInterval / 4);
         if (sTime < totalDurationSec) {
@@ -362,7 +329,6 @@ export const scheduleBackgroundMusic = (
         }
       }
 
-      // Smooth Rhodes Chords
       if (beatInMeasure === 0) {
         playChord(ctx, musicGain, time, chords[measureIdx], beatInterval * 2.8, 0.4, 'sine');
       }
@@ -370,13 +336,12 @@ export const scheduleBackgroundMusic = (
     return;
   }
 
-  // 4. Viral Reels & TikTok Beat (132 BPM Trap Groove)
   if (genre === 'viral_reels') {
     const bpm = 132;
     const beatInterval = 60 / bpm;
     const totalBeats = Math.ceil(totalDurationSec / beatInterval);
 
-    const bassNotes = [41.2, 41.2, 49.0, 43.65]; // 808 Sub glide
+    const bassNotes = [41.2, 41.2, 49.0, 43.65];
     const leadNotes = [523.25, 659.25, 783.99, 987.77, 1046.5];
 
     for (let beat = 0; beat < totalBeats; beat++) {
@@ -386,18 +351,15 @@ export const scheduleBackgroundMusic = (
       const measureIdx = Math.floor(beat / 4) % 4;
       const beatInMeasure = beat % 4;
 
-      // Heavy 808 Kick
       if (beatInMeasure === 0 || (beatInMeasure === 2 && beat % 2 === 0)) {
         playKick(ctx, musicGain, time, 0.7);
         playBassNote(ctx, musicGain, time, bassNotes[measureIdx], beatInterval * 1.4, 0.6);
       }
 
-      // Snappy Trap Clap on 2
       if (beatInMeasure === 2) {
         playSnare(ctx, musicGain, time, 0.6);
       }
 
-      // Fast rolling hi-hats (Triplets / 16ths)
       for (let h = 0; h < 4; h++) {
         const hTime = time + h * (beatInterval / 4);
         if (hTime < totalDurationSec) {
@@ -405,25 +367,22 @@ export const scheduleBackgroundMusic = (
         }
       }
 
-      // Catchy Bell Melody
       const note = leadNotes[(beat * 3) % leadNotes.length];
       playChord(ctx, musicGain, time, [note], beatInterval * 0.4, 0.28, 'sine');
     }
     return;
   }
 
-  // 5. Soft Acoustic & Lo-Fi Melody (88 BPM)
   if (genre === 'soft_acoustic') {
     const bpm = 88;
     const beatInterval = 60 / bpm;
     const totalBeats = Math.ceil(totalDurationSec / beatInterval);
 
-    // Warm Lo-Fi Chords: Fmaj7, Em7, Dm7, Cmaj7
     const chords = [
-      [349.23, 440.0, 523.25, 659.25], // Fmaj7
-      [329.63, 392.0, 493.88, 587.33], // Em7
-      [293.66, 349.23, 440.0, 523.25], // Dm7
-      [261.63, 329.63, 392.0, 493.88], // Cmaj7
+      [349.23, 440.0, 523.25, 659.25],
+      [329.63, 392.0, 493.88, 587.33],
+      [293.66, 349.23, 440.0, 523.25],
+      [261.63, 329.63, 392.0, 493.88],
     ];
     const bassNotes = [43.65, 41.2, 36.71, 32.7];
 
@@ -434,7 +393,6 @@ export const scheduleBackgroundMusic = (
       const measureIdx = Math.floor(beat / 4) % 4;
       const beatInMeasure = beat % 4;
 
-      // Soft Thump Kick
       if (beatInMeasure === 0) {
         playKick(ctx, musicGain, time, 0.4);
         playBassNote(ctx, musicGain, time, bassNotes[measureIdx], beatInterval * 2.0, 0.35);
@@ -443,7 +401,6 @@ export const scheduleBackgroundMusic = (
         playSnare(ctx, musicGain, time, 0.3);
       }
 
-      // Acoustic Plucks on each 8th note
       const currentChord = chords[measureIdx];
       const pluck1 = currentChord[beatInMeasure % currentChord.length];
       playChord(ctx, musicGain, time, [pluck1], beatInterval * 0.9, 0.3, 'triangle');
@@ -457,9 +414,6 @@ export const scheduleBackgroundMusic = (
   }
 };
 
-/**
- * Mixes all audio elements (BGM + Transition SFX) for the entire video duration
- */
 export const mixCommercialAudio = (
   ctx: AudioContext | OfflineAudioContext,
   destination: AudioNode,
@@ -468,7 +422,6 @@ export const mixCommercialAudio = (
   numImages: number,
   settings: AudioEngineSettings
 ) => {
-  // 1. Background Music
   scheduleBackgroundMusic(
     ctx,
     destination,
@@ -478,12 +431,9 @@ export const mixCommercialAudio = (
     settings.customAudioBuffer
   );
 
-  // 2. Sound Effects: Transition Whooshes at each image slide
   if (settings.sfxEnabled && settings.sfxVolume > 0) {
-    // Initial opening chime on video start
     playShimmerChime(ctx, destination, 0.2, settings.sfxVolume * 0.8);
 
-    // Whoosh at each image change transition, perfectly aligned with visual slide trigger
     const cycleTime = totalDurationSec / Math.max(1, numImages);
     for (let i = 1; i < numImages; i++) {
       const transitionTime = i * cycleTime;
@@ -492,17 +442,12 @@ export const mixCommercialAudio = (
       }
     }
 
-    // Gentle CTA shine sound near the end
     if (totalDurationSec > 3) {
       playShimmerChime(ctx, destination, totalDurationSec - 1.8, settings.sfxVolume * 0.6);
     }
   }
 };
 
-/**
- * Pre-renders complete commercial audio (BGM + Transition SFX) into a single pristine AudioBuffer
- * using OfflineAudioContext in ~15ms. Eliminates all real-time audio scheduling jitter and CPU stalls during video recording!
- */
 export const preRenderFullCommercialAudio = async (
   totalDurationSec: number,
   secondsPerImage: number,
@@ -534,4 +479,3 @@ export const preRenderFullCommercialAudio = async (
     return null;
   }
 };
-
